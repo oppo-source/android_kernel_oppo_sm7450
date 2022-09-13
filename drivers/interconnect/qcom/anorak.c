@@ -16,6 +16,7 @@
 #include <linux/sort.h>
 
 #include "icc-rpmh.h"
+#include "bcm-voter.h"
 #include "qnoc-qos.h"
 
 static const struct regmap_config icc_regmap_config = {
@@ -1715,7 +1716,6 @@ static struct qcom_icc_bcm bcm_acv = {
 	.name = "ACV",
 	.voter_idx = 0,
 	.enable_mask = 0x8,
-	.perf_mode_mask = 0x2,
 	.num_nodes = 1,
 	.nodes = { &ebi },
 };
@@ -1731,7 +1731,6 @@ static struct qcom_icc_bcm bcm_cn0 = {
 	.name = "CN0",
 	.voter_idx = 0,
 	.enable_mask = 0x1,
-	.keepalive = true,
 	.num_nodes = 45,
 	.nodes = { &qnm_gemnoc_cnoc, &qhs_ahb2phy0,
 		   &qhs_ahb2phy1, &qhs_aoss,
@@ -1769,7 +1768,6 @@ static struct qcom_icc_bcm bcm_co0 = {
 static struct qcom_icc_bcm bcm_mc0 = {
 	.name = "MC0",
 	.voter_idx = 0,
-	.keepalive = true,
 	.num_nodes = 1,
 	.nodes = { &ebi },
 };
@@ -1777,7 +1775,6 @@ static struct qcom_icc_bcm bcm_mc0 = {
 static struct qcom_icc_bcm bcm_mm0 = {
 	.name = "MM0",
 	.voter_idx = 0,
-	.keepalive_early = true,
 	.num_nodes = 4,
 	.nodes = { &qnm_mdp0_0, &qnm_mdp0_1,
 		   &qnm_mdp1_0, &qns_mem_noc_hf },
@@ -1798,8 +1795,6 @@ static struct qcom_icc_bcm bcm_mm1 = {
 static struct qcom_icc_bcm bcm_qup0 = {
 	.name = "QUP0",
 	.voter_idx = 0,
-	.keepalive_early = true,
-	.vote_scale = 1,
 	.num_nodes = 1,
 	.nodes = { &qup0_core_slave },
 };
@@ -1807,8 +1802,6 @@ static struct qcom_icc_bcm bcm_qup0 = {
 static struct qcom_icc_bcm bcm_qup1 = {
 	.name = "QUP1",
 	.voter_idx = 0,
-	.keepalive_early = true,
-	.vote_scale = 1,
 	.num_nodes = 1,
 	.nodes = { &qup1_core_slave },
 };
@@ -1816,7 +1809,6 @@ static struct qcom_icc_bcm bcm_qup1 = {
 static struct qcom_icc_bcm bcm_sh0 = {
 	.name = "SH0",
 	.voter_idx = 0,
-	.keepalive = true,
 	.num_nodes = 1,
 	.nodes = { &qns_llcc },
 };
@@ -1834,7 +1826,6 @@ static struct qcom_icc_bcm bcm_sh1 = {
 static struct qcom_icc_bcm bcm_sn0 = {
 	.name = "SN0",
 	.voter_idx = 0,
-	.keepalive = true,
 	.num_nodes = 1,
 	.nodes = { &qns_gemnoc_sf },
 };
@@ -1878,23 +1869,22 @@ static struct qcom_icc_bcm bcm_sn7 = {
 
 static struct qcom_icc_bcm bcm_acv_disp = {
 	.name = "ACV",
-	.voter_idx = 0,
+	.voter_idx = 1,
 	.enable_mask = 0x1,
-	.perf_mode_mask = 0x2,
 	.num_nodes = 1,
 	.nodes = { &ebi_disp },
 };
 
 static struct qcom_icc_bcm bcm_mc0_disp = {
 	.name = "MC0",
-	.voter_idx = 0,
+	.voter_idx = 1,
 	.num_nodes = 1,
 	.nodes = { &ebi_disp },
 };
 
 static struct qcom_icc_bcm bcm_mm0_disp = {
 	.name = "MM0",
-	.voter_idx = 0,
+	.voter_idx = 1,
 	.num_nodes = 3,
 	.nodes = { &qnm_mdp0_0_disp, &qnm_mdp0_1_disp,
 		   &qns_mem_noc_hf_disp },
@@ -1902,14 +1892,14 @@ static struct qcom_icc_bcm bcm_mm0_disp = {
 
 static struct qcom_icc_bcm bcm_sh0_disp = {
 	.name = "SH0",
-	.voter_idx = 0,
+	.voter_idx = 1,
 	.num_nodes = 1,
 	.nodes = { &qns_llcc_disp },
 };
 
 static struct qcom_icc_bcm bcm_sh1_disp = {
 	.name = "SH1",
-	.voter_idx = 0,
+	.voter_idx = 1,
 	.enable_mask = 0x1,
 	.num_nodes = 1,
 	.nodes = { &qnm_pcie_disp },
@@ -1932,7 +1922,6 @@ static char *aggre1_noc_voters[] = {
 };
 
 static struct qcom_icc_desc anorak_aggre1_noc = {
-	.config = &icc_regmap_config,
 	.nodes = aggre1_noc_nodes,
 	.num_nodes = ARRAY_SIZE(aggre1_noc_nodes),
 	.bcms = aggre1_noc_bcms,
@@ -1964,7 +1953,6 @@ static char *aggre2_noc_voters[] = {
 };
 
 static struct qcom_icc_desc anorak_aggre2_noc = {
-	.config = &icc_regmap_config,
 	.nodes = aggre2_noc_nodes,
 	.num_nodes = ARRAY_SIZE(aggre2_noc_nodes),
 	.bcms = aggre2_noc_bcms,
@@ -1990,7 +1978,6 @@ static char *clk_virt_voters[] = {
 };
 
 static struct qcom_icc_desc anorak_clk_virt = {
-	.config = &icc_regmap_config,
 	.nodes = clk_virt_nodes,
 	.num_nodes = ARRAY_SIZE(clk_virt_nodes),
 	.bcms = clk_virt_bcms,
@@ -2056,7 +2043,6 @@ static char *config_noc_voters[] = {
 };
 
 static struct qcom_icc_desc anorak_config_noc = {
-	.config = &icc_regmap_config,
 	.nodes = config_noc_nodes,
 	.num_nodes = ARRAY_SIZE(config_noc_nodes),
 	.bcms = config_noc_bcms,
@@ -2092,10 +2078,10 @@ static struct qcom_icc_node *gem_noc_nodes[] = {
 
 static char *gem_noc_voters[] = {
 	"hlos",
+	"disp",
 };
 
 static struct qcom_icc_desc anorak_gem_noc = {
-	.config = &icc_regmap_config,
 	.nodes = gem_noc_nodes,
 	.num_nodes = ARRAY_SIZE(gem_noc_nodes),
 	.bcms = gem_noc_bcms,
@@ -2125,7 +2111,6 @@ static char *lpass_ag_noc_voters[] = {
 };
 
 static struct qcom_icc_desc anorak_lpass_ag_noc = {
-	.config = &icc_regmap_config,
 	.nodes = lpass_ag_noc_nodes,
 	.num_nodes = ARRAY_SIZE(lpass_ag_noc_nodes),
 	.bcms = lpass_ag_noc_bcms,
@@ -2150,10 +2135,10 @@ static struct qcom_icc_node *mc_virt_nodes[] = {
 
 static char *mc_virt_voters[] = {
 	"hlos",
+	"disp",
 };
 
 static struct qcom_icc_desc anorak_mc_virt = {
-	.config = &icc_regmap_config,
 	.nodes = mc_virt_nodes,
 	.num_nodes = ARRAY_SIZE(mc_virt_nodes),
 	.bcms = mc_virt_bcms,
@@ -2192,10 +2177,10 @@ static struct qcom_icc_node *mmss_noc_nodes[] = {
 
 static char *mmss_noc_voters[] = {
 	"hlos",
+	"disp",
 };
 
 static struct qcom_icc_desc anorak_mmss_noc = {
-	.config = &icc_regmap_config,
 	.nodes = mmss_noc_nodes,
 	.num_nodes = ARRAY_SIZE(mmss_noc_nodes),
 	.bcms = mmss_noc_bcms,
@@ -2220,7 +2205,6 @@ static char *nsp_noc_voters[] = {
 };
 
 static struct qcom_icc_desc anorak_nsp_noc = {
-	.config = &icc_regmap_config,
 	.nodes = nsp_noc_nodes,
 	.num_nodes = ARRAY_SIZE(nsp_noc_nodes),
 	.bcms = nsp_noc_bcms,
@@ -2247,7 +2231,6 @@ static char *pcie_anoc_voters[] = {
 };
 
 static struct qcom_icc_desc anorak_pcie_anoc = {
-	.config = &icc_regmap_config,
 	.nodes = pcie_anoc_nodes,
 	.num_nodes = ARRAY_SIZE(pcie_anoc_nodes),
 	.bcms = pcie_anoc_bcms,
@@ -2281,7 +2264,6 @@ static char *system_noc_voters[] = {
 };
 
 static struct qcom_icc_desc anorak_system_noc = {
-	.config = &icc_regmap_config,
 	.nodes = system_noc_nodes,
 	.num_nodes = ARRAY_SIZE(system_noc_nodes),
 	.bcms = system_noc_bcms,
@@ -2293,7 +2275,11 @@ static struct qcom_icc_desc anorak_system_noc = {
 static int qnoc_probe(struct platform_device *pdev)
 {
 	const struct qcom_icc_desc *desc;
+	struct icc_onecell_data *data;
+	struct icc_provider *provider;
 	struct qcom_icc_node **qnodes;
+	struct qcom_icc_provider *qp;
+	struct icc_node *node;
 	size_t num_nodes, i;
 	int ret;
 
@@ -2304,20 +2290,72 @@ static int qnoc_probe(struct platform_device *pdev)
 	qnodes = desc->nodes;
 	num_nodes = desc->num_nodes;
 
+	qp = devm_kzalloc(&pdev->dev, sizeof(*qp), GFP_KERNEL);
+	if (!qp)
+		return -ENOMEM;
+
+	data = devm_kcalloc(&pdev->dev, num_nodes, sizeof(*node), GFP_KERNEL);
+	if (!data)
+		return -ENOMEM;
+
+	provider = &qp->provider;
+	provider->dev = &pdev->dev;
+	provider->set = qcom_icc_set_stub;
+	provider->pre_aggregate = qcom_icc_pre_aggregate;
+	provider->aggregate = qcom_icc_aggregate_stub;
+	provider->xlate = of_icc_xlate_onecell;
+	INIT_LIST_HEAD(&provider->nodes);
+	provider->data = data;
+
+	qp->dev = &pdev->dev;
+	qp->bcms = desc->bcms;
+	qp->num_bcms = desc->num_bcms;
+
+	ret = icc_provider_add(provider);
+	if (ret) {
+		dev_err(&pdev->dev, "error adding interconnect provider\n");
+		return ret;
+	}
+
 	for (i = 0; i < num_nodes; i++) {
+		size_t j;
+
 		if (!qnodes[i])
 			continue;
 
-		if (qnodes[i]->qosbox)
-			qnodes[i]->qosbox = NULL;
+		node = icc_node_create(qnodes[i]->id);
+		if (IS_ERR(node)) {
+			ret = PTR_ERR(node);
+			goto err;
+		}
+
+		node->name = qnodes[i]->name;
+		node->data = qnodes[i];
+		icc_node_add(node, provider);
+
+		dev_dbg(&pdev->dev, "registered node %pK %s %d\n", node,
+			qnodes[i]->name, node->id);
+
+		/* populate links */
+		for (j = 0; j < qnodes[i]->num_links; j++)
+			icc_link_create(node, qnodes[i]->links[j]);
+
+		data->nodes[i] = node;
+	}
+	data->num_nodes = num_nodes;
+
+	platform_set_drvdata(pdev, qp);
+
+	dev_err(&pdev->dev, "Registered ANORAK ICC\n");
+
+	return ret;
+err:
+	list_for_each_entry(node, &provider->nodes, node_list) {
+		icc_node_del(node);
+		icc_node_destroy(node->id);
 	}
 
-	ret = qcom_icc_rpmh_probe(pdev);
-	if (ret)
-		dev_err(&pdev->dev, "failed to register ICC provider\n");
-	else
-		dev_info(&pdev->dev, "Registered ANORAK ICC\n");
-
+	icc_provider_del(provider);
 	return ret;
 }
 
@@ -2343,6 +2381,7 @@ static struct platform_driver qnoc_driver = {
 	.driver = {
 		.name = "qnoc-anorak",
 		.of_match_table = qnoc_of_match,
+		.sync_state = qcom_icc_rpmh_sync_state,
 	},
 };
 

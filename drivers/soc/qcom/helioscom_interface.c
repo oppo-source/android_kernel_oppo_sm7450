@@ -16,6 +16,8 @@
 #include <linux/slab.h>
 #include <linux/sysfs.h>
 #include <linux/kobject.h>
+#include <soc/qcom/subsystem_restart.h>
+#include <soc/qcom/subsystem_notif.h>
 #include "helioscom.h"
 #include "linux/helioscom_interface.h"
 #include "helioscom_interface.h"
@@ -28,8 +30,7 @@
 #include <asm/dma.h>
 #include <linux/dma-mapping.h>
 
-#include <linux/remoteproc.h>
-#include <linux/remoteproc/qcom_rproc.h>
+#include "peripheral-loader.h"
 
 #define HELIOSCOM "helios_com_dev"
 
@@ -114,6 +115,7 @@ struct heliosdaemon_priv {
 	struct wakeup_source *helioscom_ws;
 };
 
+static void *helioscom_intf_drv;
 
 struct helios_event {
 	enum helios_event_type e_type;
@@ -127,7 +129,7 @@ struct service_info {
 };
 
 static char *ssr_domains[] = {
-	"helios",
+	"heliosfw",
 	"modem",
 	"adsp",
 };
@@ -145,7 +147,6 @@ static	bool                     helios_app_running;
 static  struct   helioscom_open_config_type   config_type;
 static DECLARE_COMPLETION(helios_modem_down_wait);
 static DECLARE_COMPLETION(helios_adsp_down_wait);
-static struct platform_device *helios_pdev;
 
 static ssize_t helios_bt_state_sysfs_read
 			(struct class *class, struct class_attribute *attr, char *buf)
@@ -290,78 +291,6 @@ static int helioschar_write_cmd(struct helios_ui_data *fui_obj_msg, unsigned int
 	return ret;
 }
 
-static void helios_load_fw(struct  heliosdaemon_priv *priv)
-{
-	struct platform_device *pdev = NULL;
-	int ret;
-	const char *firmware_name = NULL;
-	phandle rproc_phandle;
-
-	if (!priv) {
-		pr_err(" %s: Private data get failed\n", __func__);
-		goto fail;
-	}
-
-	pdev = helios_pdev;
-
-	if (!pdev) {
-		pr_err("%s: Platform device null\n", __func__);
-		goto fail;
-	}
-
-	if (!pdev->dev.of_node) {
-		pr_err("%s: Device tree information missing\n", __func__);
-		goto fail;
-	}
-
-	ret = of_property_read_string(pdev->dev.of_node,
-		"qcom,firmware-name", &firmware_name);
-	if (ret < 0) {
-		pr_err("can't get fw name.\n");
-		goto fail;
-	}
-
-
-	if (!priv->pil_h) {
-		if (of_property_read_u32(pdev->dev.of_node, "qcom,rproc-handle",
-					 &rproc_phandle)) {
-			pr_err("error reading rproc phandle\n");
-			goto fail;
-		}
-
-		priv->pil_h = rproc_get_by_phandle(rproc_phandle);
-		if (!priv->pil_h) {
-			pr_err("rproc not found\n");
-			goto fail;
-		}
-	}
-
-	ret = rproc_boot(priv->pil_h);
-	if (ret) {
-		pr_err("%s: rproc boot failed, err: %d\n",
-			__func__, ret);
-		goto fail;
-	}
-
-	pr_debug("%s: Helios image is loaded\n", __func__);
-	return;
-
-fail:
-	pr_err("%s: HELIOS image loading failed\n", __func__);
-}
-
-static void helios_loader_unload(struct  heliosdaemon_priv *priv)
-{
-	if (!priv)
-		return;
-
-	if (priv->pil_h) {
-		pr_debug("%s: calling subsystem put\n", __func__);
-		rproc_shutdown(priv->pil_h);
-		priv->pil_h = NULL;
-	}
-}
-
 int helios_soft_reset(void)
 {
 	pr_debug("do HELIOS reset using gpio %d\n", heliosreset_gpio);
@@ -384,7 +313,6 @@ int helios_soft_reset(void)
 	return 0;
 }
 EXPORT_SYMBOL(helios_soft_reset);
-
 
 
 static long helios_com_ioctl(struct file *filp,
@@ -440,14 +368,18 @@ static long helios_com_ioctl(struct file *filp,
 			ret = -EFAULT;
 			break;
 		}
-		helios_load_fw(dev);
+		dev->pil_h = subsystem_get_with_fwname("heliosfw", "heliosfw");
 		if (!dev->pil_h) {
 			pr_err("failed to load helios\n");
 			ret = -EFAULT;
 		}
 		break;
 	case HELIOS_UNLOAD:
-		helios_loader_unload(dev);
+		if (dev->pil_h) {
+			subsystem_put(dev->pil_h);
+			dev->pil_h = NULL;
+			helios_soft_reset();
+		}
 		ret = 0;
 		break;
 	default:
@@ -486,7 +418,7 @@ static int helios_daemon_probe(struct platform_device *pdev)
 		return -ENODEV;
 	dev->platform_dev = &pdev->dev;
 	pr_info("%s success\n", __func__);
-	helios_pdev = pdev;
+
 	ssr_register();
 	return 0;
 }
@@ -521,30 +453,37 @@ static int ssr_helios_cb(struct notifier_block *this,
 		unsigned long opcode, void *data)
 {
 	struct helios_event heliose;
+	struct heliosdaemon_priv *dev = container_of(helioscom_intf_drv,
+						struct heliosdaemon_priv, lhndl);
 
 	switch (opcode) {
-	case QCOM_SSR_BEFORE_SHUTDOWN:
-		pr_err("Helios before shutdown\n");
+	case SUBSYS_BEFORE_SHUTDOWN:
+		pr_debug("Helios before shutdown\n");
 		heliose.e_type = HELIOS_BEFORE_POWER_DOWN;
+		helioscom_heliosdown_handler();
 		helioscom_set_spi_state(HELIOSCOM_SPI_BUSY);
 		send_uevent(&heliose);
+		queue_work(dev->helioscom_wq, &dev->helioscom_down_work);
 		break;
-	case QCOM_SSR_AFTER_SHUTDOWN:
-		pr_err("Helios after shutdown\n");
+	case SUBSYS_AFTER_SHUTDOWN:
+		pr_debug("Helios after shutdown\n");
 		heliose.e_type = HELIOS_AFTER_POWER_DOWN;
 		helioscom_heliosdown_handler();
 		send_uevent(&heliose);
 		break;
-	case QCOM_SSR_BEFORE_POWERUP:
-		pr_err("Helios before powerup\n");
+	case SUBSYS_BEFORE_POWERUP:
+		pr_debug("Helios before powerup\n");
 		heliose.e_type = HELIOS_BEFORE_POWER_UP;
+		helioscom_heliosdown_handler();
 		send_uevent(&heliose);
 		break;
-	case QCOM_SSR_AFTER_POWERUP:
-		pr_err("Helios after powerup\n");
+	case SUBSYS_AFTER_POWERUP:
+		pr_debug("Helios after powerup\n");
 		heliose.e_type = HELIOS_AFTER_POWER_UP;
 		helioscom_set_spi_state(HELIOSCOM_SPI_FREE);
 		send_uevent(&heliose);
+		if (dev->helioscom_current_state == HELIOSCOM_STATE_INIT)
+			queue_work(dev->helioscom_wq, &dev->helioscom_up_work);
 		break;
 	}
 	return NOTIFY_DONE;
@@ -590,11 +529,11 @@ static void ssr_register(void)
 					service_data[i].domain_id);
 		} else {
 			service_data[i].handle =
-					qcom_register_ssr_notifier(
+					subsys_notif_register_notifier(
 					ssr_domains[service_data[i].domain_id],
 					service_data[i].nb);
 			if (IS_ERR_OR_NULL(service_data[i].handle)) {
-				pr_err("ssr register failed for id = %d\n",
+				pr_err("subsys register failed for id = %d\n",
 						service_data[i].domain_id);
 				service_data[i].handle = NULL;
 			}

@@ -10,6 +10,12 @@ config QCOM_GDSC
 config QCOM_RPMCC
 	bool
 
+config OPLUS_POWERINFO_STANDBY_DEBUG
+	bool "powerinfo standby config"
+	default n
+	help
+	  Select this config to enable powerinfo standby debug
+
 menuconfig COMMON_CLK_QCOM
 	tristate "Support for Qualcomm's clock controllers"
 	depends on OF
@@ -926,23 +932,5 @@ config SXR_VIDEOCC_ANORAK
 	  ANORAK devices.
 	  Say Y if you want to support video devices and functionality such as
 	  video encode/decode.
-
-config SXR_GPUCC_ANORAK
-	tristate "ANORAK Graphics Clock Controller"
-	select SXR_GCC_ANORAK
-	help
-	  Support for the graphics clock controller on Qualcomm Technologies, Inc.
-	  ANORAK devices.
-	  Say Y if you want to support graphics controller devices and
-	  functionality such as 3D graphics.
-
-config SXR_CAMCC_ANORAK
-	tristate "ANORAK Camera Clock Controller"
-	select SXR_GCC_ANORAK
-	help
-	  Support for the camera clock controller on Qualcomm Technologies, Inc.
-	  ANORAK devices.
-	  Say Y if you want to support camera devices and functionality such as
-	  capturing pictures.
 
 endif

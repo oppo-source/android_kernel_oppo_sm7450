@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
+<<<<<<< HEAD
+=======
  * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
+>>>>>>> origin/s/feature_temp7450_SM8450_21001_20220125
  * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
@@ -1120,9 +1123,6 @@ no_gx_power:
 
 	if (!IS_ERR_OR_NULL(adreno_dev->gpuhtw_llc_slice))
 		llcc_slice_deactivate(adreno_dev->gpuhtw_llc_slice);
-
-	if (!IS_ERR_OR_NULL(adreno_dev->gpumv_llc_slice))
-		llcc_slice_deactivate(adreno_dev->gpumv_llc_slice);
 
 	clear_bit(RGMU_PRIV_GPU_STARTED, &rgmu->flags);
 

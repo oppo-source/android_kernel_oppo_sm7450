@@ -56,10 +56,6 @@ struct gen7_gmu_device {
 	/** @num_clks: Number of entries in the @clks array */
 	int num_clks;
 	unsigned int idle_level;
-	/** @freqs: Array of GMU frequencies */
-	u32 freqs[GMU_MAX_PWRLEVELS];
-	/** @vlvls: Array of GMU voltage levels */
-	u32 vlvls[GMU_MAX_PWRLEVELS];
 	struct kgsl_mailbox mailbox;
 	/** @gmu_globals: Array to store gmu global buffers */
 	struct kgsl_memdesc gmu_globals[GMU_KERNEL_ENTRIES];
@@ -87,7 +83,7 @@ struct gen7_gmu_device {
 	struct kobject log_kobj;
 	/*
 	 * @perf_ddr_bw: The lowest ddr bandwidth that puts CX at a corner at
-	 * which GMU can run at higher frequency.
+	 * which GMU can run at 500 Mhz.
 	 */
 	u32 perf_ddr_bw;
 	/** @rdpm_cx_virt: Pointer where the RDPM CX block is mapped */
@@ -257,6 +253,12 @@ void gen7_gmu_aop_send_acd_state(struct gen7_gmu_device *gmu, bool flag);
  * Return: 0 on success or negative error on failure
  */
 int gen7_gmu_enable_gdsc(struct adreno_device *adreno_dev);
+
+/**
+ * gen7_gmu_disable_gdsc - Disable gmu gdsc
+ * @adreno_dev: Pointer to the adreno device
+ */
+void gen7_gmu_disable_gdsc(struct adreno_device *adreno_dev);
 
 /**
  * gen7_gmu_load_fw - Load gmu firmware
@@ -430,12 +432,6 @@ int gen7_gmu_enable_clks(struct adreno_device *adreno_dev);
  * Return: 0 on success or negative error on failure
  */
 int gen7_gmu_enable_gdsc(struct adreno_device *adreno_dev);
-
-/**
- * gen7_gmu_disable_gdsc - Disable gmu gdsc
- * @adreno_dev: Pointer to the adreno device
- */
-void gen7_gmu_disable_gdsc(struct adreno_device *adreno_dev);
 
 /**
  * gen7_gmu_handle_watchdog - Handle watchdog interrupt

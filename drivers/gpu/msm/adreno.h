@@ -599,10 +599,6 @@ struct adreno_device {
 	bool gpu_llc_slice_enable;
 	void *gpuhtw_llc_slice;
 	bool gpuhtw_llc_slice_enable;
-	/** @gpumv_llc_slice: GPU MV buffer system cache slice descriptor*/
-	void *gpumv_llc_slice;
-	/** @gpumv_llc_slice_enable: To enable GPUMV buffer system cache slice or not */
-	bool gpumv_llc_slice_enable;
 	unsigned int zap_loaded;
 	/**
 	 * @critpkts: Memory descriptor for 5xx critical packets if applicable
@@ -639,8 +635,6 @@ struct adreno_device {
 	 * controls perfcounter ioctl read
 	 */
 	bool perfcounter;
-	/** @gmu_hub_clk_freq: Gmu hub interface clock frequency */
-	u64 gmu_hub_clk_freq;
 };
 
 /**

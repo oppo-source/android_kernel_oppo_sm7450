@@ -1214,25 +1214,8 @@ void gen7_snapshot(struct adreno_device *adreno_dev,
 		kgsl_regwrite(device, GEN7_RBBM_CLOCK_CNTL3_TP0, cgc2);
 	}
 
-	kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_REGS_V2,
-		snapshot, adreno_snapshot_registers_v2,
-		(void *)gen7_gpucc_registers);
-
-	if (adreno_is_gen7_3_0(adreno_dev))
-		kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_REGS_V2,
-			snapshot, adreno_snapshot_registers_v2,
-			(void *)gen7_3_0_cpr_registers);
-	else
-		kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_REGS_V2,
-			snapshot, adreno_snapshot_registers_v2,
-			(void *)gen7_cpr_registers);
-
-	if (!adreno_gx_is_on(adreno_dev)) {
-		kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_REGS_V2,
-			snapshot, adreno_snapshot_registers_v2,
-			(void *)gen7_cx_misc_registers);
+	if (!adreno_gx_is_on(adreno_dev))
 		return;
-	}
 
 	kgsl_regread(device, GEN7_CP_IB1_BASE, &lo);
 	kgsl_regread(device, GEN7_CP_IB1_BASE_HI, &hi);
@@ -1254,6 +1237,19 @@ void gen7_snapshot(struct adreno_device *adreno_dev,
 	kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_REGS_V2,
 		snapshot, adreno_snapshot_registers_v2,
 		(void *)gen7_pre_crashdumper_registers);
+
+	kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_REGS_V2,
+		snapshot, adreno_snapshot_registers_v2,
+		(void *)gen7_gpucc_registers);
+
+	if (adreno_is_gen7_3_0(adreno_dev))
+		kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_REGS_V2,
+			snapshot, adreno_snapshot_registers_v2,
+			(void *)gen7_3_0_cpr_registers);
+	else
+		kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_REGS_V2,
+			snapshot, adreno_snapshot_registers_v2,
+			(void *)gen7_cpr_registers);
 
 	gen7_reglist_snapshot(device, snapshot);
 

@@ -696,7 +696,6 @@ static void adreno_of_get_initial_pwrlevels(struct kgsl_pwrctrl *pwr,
 	if (level < 0 || level >= pwr->num_pwrlevels || level < pwr->default_pwrlevel)
 		level = pwr->num_pwrlevels - 1;
 
-	pwr->min_render_pwrlevel = level;
 	pwr->min_pwrlevel = level;
 }
 
@@ -1072,24 +1071,6 @@ static int adreno_probe_llcc(struct adreno_device *adreno_dev,
 	} else
 		adreno_dev->gpuhtw_llc_slice_enable = true;
 
-	if (adreno_is_a621(adreno_dev)) {
-		/* Get the system cache slice descriptor for GPU MV grid buffer */
-		adreno_dev->gpumv_llc_slice = llcc_slice_getd(LLCC_GPUMV);
-		ret = PTR_ERR_OR_ZERO(adreno_dev->gpumv_llc_slice);
-		if (ret) {
-			if (ret == -EPROBE_DEFER) {
-				llcc_slice_putd(adreno_dev->gpu_llc_slice);
-				llcc_slice_putd(adreno_dev->gpuhtw_llc_slice);
-				return ret;
-			}
-
-			if (ret != -ENOENT)
-				dev_warn(&pdev->dev,
-					"Unable to get GPUMV buffer slice: %d\n", ret);
-		} else
-			adreno_dev->gpumv_llc_slice_enable = true;
-	}
-
 	return 0;
 }
 #else
@@ -1395,9 +1376,6 @@ static void adreno_unbind(struct device *dev)
 
 	if (!IS_ERR_OR_NULL(adreno_dev->gpuhtw_llc_slice))
 		llcc_slice_putd(adreno_dev->gpuhtw_llc_slice);
-
-	if (!IS_ERR_OR_NULL(adreno_dev->gpumv_llc_slice))
-		llcc_slice_putd(adreno_dev->gpumv_llc_slice);
 
 	kgsl_pwrscale_close(device);
 
@@ -1903,9 +1881,6 @@ static int adreno_stop(struct kgsl_device *device)
 
 	if (!IS_ERR_OR_NULL(adreno_dev->gpuhtw_llc_slice))
 		llcc_slice_deactivate(adreno_dev->gpuhtw_llc_slice);
-
-	if (!IS_ERR_OR_NULL(adreno_dev->gpumv_llc_slice))
-		llcc_slice_deactivate(adreno_dev->gpumv_llc_slice);
 
 	adreno_set_active_ctxs_null(adreno_dev);
 
@@ -2983,7 +2958,7 @@ static inline bool _verify_ib(struct kgsl_device_private *dev_priv,
 
 	/* The maximum allowable size for an IB in the CP is 0xFFFFF dwords */
 	if (ib->size == 0 || ((ib->size >> 2) > 0xFFFFF)) {
-		pr_context(device, context, "ctxt %u invalid ib size %lld\n",
+		pr_context(device, context, "ctxt %d invalid ib size %lld\n",
 			context->id, ib->size);
 		return false;
 	}
@@ -2991,7 +2966,7 @@ static inline bool _verify_ib(struct kgsl_device_private *dev_priv,
 	/* Make sure that the address is in range and dword aligned */
 	if (!kgsl_mmu_gpuaddr_in_range(private->pagetable, ib->gpuaddr,
 		ib->size) || !IS_ALIGNED(ib->gpuaddr, 4)) {
-		pr_context(device, context, "ctxt %u invalid ib gpuaddr %llX\n",
+		pr_context(device, context, "ctxt %d invalid ib gpuaddr %llX\n",
 			context->id, ib->gpuaddr);
 		return false;
 	}

@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
  * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #ifndef _LINUX_MSM_GENI_SE
@@ -52,7 +51,6 @@ enum se_protocol_types {
  * @num_clk_levels:	Number of valid clock levels in clk_perf_tbl.
  * @clk_perf_tbl:	Table of clock frequency input to Serial Engine clock.
  * @proto:		Protocol configured for this serial engine
- * @is_list_add;	To synchronize list add and del.
  */
 struct se_geni_rsc {
 	struct device *ctrl_dev;
@@ -72,17 +70,24 @@ struct se_geni_rsc {
 	struct pinctrl_state *geni_gpio_shutdown;
 	struct pinctrl_state *geni_gpio_active;
 	struct pinctrl_state *geni_gpio_sleep;
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	struct pinctrl_state *geni_gpio_pulldown;
+	struct pinctrl_state *geni_gpio_pullup;
+#endif /* OPLUS_FEATURE_CHG_BASIC */
 	int	clk_freq_out;
 	unsigned int num_clk_levels;
 	unsigned long *clk_perf_tbl;
 	enum se_protocol_types proto;
-	bool is_list_add;
 };
 
 #define PINCTRL_DEFAULT	"default"
 #define PINCTRL_ACTIVE	"active"
 #define PINCTRL_SLEEP	"sleep"
 #define PINCTRL_SHUTDOWN	"shutdown"
+#ifdef OPLUS_FEATURE_CHG_BASIC
+#define PINCTRL_PULLDOWN	"pulldown"
+#define PINCTRL_PULLUP		"pullup"
+#endif /* OPLUS_FEATURE_CHG_BASIC */
 
 #define KHz(freq) (1000 * (freq))
 

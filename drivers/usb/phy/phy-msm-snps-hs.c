@@ -130,7 +130,6 @@ struct msm_hsphy {
 
 	struct clk		*ref_clk_src;
 	struct clk		*cfg_ahb_clk;
-	struct clk		*ref_clk;
 	struct reset_control	*phy_reset;
 
 	struct regulator	*vdd;
@@ -146,7 +145,10 @@ struct msm_hsphy {
 
 	int			*param_override_seq;
 	int			param_override_seq_cnt;
-
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	int			*param_override_seq_host;
+	int			param_override_seq_cnt_host;
+#endif
 	void __iomem		*phy_rcal_reg;
 	u32			rcal_mask;
 
@@ -174,6 +176,32 @@ struct msm_hsphy {
 	u8			param_ovrd3;
 };
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+static int txvref_tune0 = 0;
+module_param(txvref_tune0, int, 0644);
+MODULE_PARM_DESC(txvref_tune0, "debug txvref_tune0");
+
+static int pre_emphasis = 0;
+module_param(pre_emphasis, int, 0644);
+MODULE_PARM_DESC(pre_emphasis, "debug pre_emphasis");
+
+static int param_ovrd0 = 0;
+module_param(param_ovrd0, int, 0644);
+MODULE_PARM_DESC(param_ovrd0, "debug param_ovrd0");
+
+static int param_ovrd1 = 0;
+module_param(param_ovrd1, int, 0644);
+MODULE_PARM_DESC(param_ovrd1, "debug param_ovrd1");
+
+static int param_ovrd2 = 0;
+module_param(param_ovrd2, int, 0644);
+MODULE_PARM_DESC(param_ovrd2, "debug param_ovrd2");
+
+static int param_ovrd3 = 0;
+module_param(param_ovrd3, int, 0644);
+MODULE_PARM_DESC(param_ovrd3, "debug param_ovrd3");
+#endif
+
 static void msm_hsphy_enable_clocks(struct msm_hsphy *phy, bool on)
 {
 	dev_dbg(phy->phy.dev, "%s(): clocks_enabled:%d on:%d\n",
@@ -182,9 +210,6 @@ static void msm_hsphy_enable_clocks(struct msm_hsphy *phy, bool on)
 	if (!phy->clocks_enabled && on) {
 		clk_prepare_enable(phy->ref_clk_src);
 
-		if (phy->ref_clk)
-			clk_prepare_enable(phy->ref_clk);
-
 		if (phy->cfg_ahb_clk)
 			clk_prepare_enable(phy->cfg_ahb_clk);
 
@@ -192,10 +217,6 @@ static void msm_hsphy_enable_clocks(struct msm_hsphy *phy, bool on)
 	}
 
 	if (phy->clocks_enabled && !on) {
-
-		if (phy->ref_clk)
-			clk_disable_unprepare(phy->ref_clk);
-
 		if (phy->cfg_ahb_clk)
 			clk_disable_unprepare(phy->cfg_ahb_clk);
 
@@ -448,10 +469,26 @@ static int msm_hsphy_init(struct usb_phy *uphy)
 				VBUSVLDEXT0, VBUSVLDEXT0);
 
 	/* set parameter ovrride  if needed */
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	if ((phy->phy.flags & PHY_HOST_MODE) && phy->param_override_seq_host) {
+		hsusb_phy_write_seq(phy->base, phy->param_override_seq_host,
+				phy->param_override_seq_cnt_host, 0);
+		dev_err(uphy->dev, "Using host eye-diagram parameters!");
+	} else if (phy->param_override_seq) {
+		hsusb_phy_write_seq(phy->base, phy->param_override_seq,
+				phy->param_override_seq_cnt, 0);
+		dev_err(uphy->dev, "Using device eye-diagram parameters!");
+	}
+#else
 	if (phy->param_override_seq)
 		hsusb_phy_write_seq(phy->base, phy->param_override_seq,
 				phy->param_override_seq_cnt, 0);
+#endif
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	if (pre_emphasis)
+		phy->pre_emphasis = pre_emphasis;
+#endif
 	if (phy->pre_emphasis) {
 		u8 val = TXPREEMPAMPTUNE0(phy->pre_emphasis) &
 				TXPREEMPAMPTUNE0_MASK;
@@ -461,6 +498,10 @@ static int msm_hsphy_init(struct usb_phy *uphy)
 				TXPREEMPAMPTUNE0_MASK, val);
 	}
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	if (txvref_tune0)
+		phy->txvref_tune0 = txvref_tune0;
+#endif
 	if (phy->txvref_tune0) {
 		u8 val = phy->txvref_tune0 & TXVREFTUNE0_MASK;
 
@@ -469,31 +510,52 @@ static int msm_hsphy_init(struct usb_phy *uphy)
 			TXVREFTUNE0_MASK, val);
 	}
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	if (param_ovrd0)
+		phy->param_ovrd0 = param_ovrd0;
+#endif
 	if (phy->param_ovrd0) {
 		msm_usb_write_readback(phy->base,
 			USB2PHY_USB_PHY_PARAMETER_OVERRIDE_X0,
 			PARAM_OVRD_MASK, phy->param_ovrd0);
 	}
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	if (param_ovrd1)
+		phy->param_ovrd1 = param_ovrd1;
+#endif
 	if (phy->param_ovrd1) {
 		msm_usb_write_readback(phy->base,
 			USB2PHY_USB_PHY_PARAMETER_OVERRIDE_X1,
 			PARAM_OVRD_MASK, phy->param_ovrd1);
 	}
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	if (param_ovrd2)
+		phy->param_ovrd2 = param_ovrd2;
+#endif
 	if (phy->param_ovrd2) {
 		msm_usb_write_readback(phy->base,
 			USB2PHY_USB_PHY_PARAMETER_OVERRIDE_X2,
 			PARAM_OVRD_MASK, phy->param_ovrd2);
 	}
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	if (param_ovrd3)
+		phy->param_ovrd3 = param_ovrd3;
+#endif
 	if (phy->param_ovrd3) {
 		msm_usb_write_readback(phy->base,
 			USB2PHY_USB_PHY_PARAMETER_OVERRIDE_X3,
 			PARAM_OVRD_MASK, phy->param_ovrd3);
 	}
-
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	dev_info(uphy->dev, "param ovrride x0:%02x x1:%02x x2:%02x x3:%02x\n",
+			phy->param_ovrd0, phy->param_ovrd1, phy->param_ovrd2, phy->param_ovrd3);
+	dev_info(uphy->dev, "x0:%08x x1:%08x x2:%08x x3:%08x\n",
+#else
 	dev_dbg(uphy->dev, "x0:%08x x1:%08x x2:%08x x3:%08x\n",
+#endif
 	readl_relaxed(phy->base + USB2PHY_USB_PHY_PARAMETER_OVERRIDE_X0),
 	readl_relaxed(phy->base + USB2PHY_USB_PHY_PARAMETER_OVERRIDE_X1),
 	readl_relaxed(phy->base + USB2PHY_USB_PHY_PARAMETER_OVERRIDE_X2),
@@ -543,15 +605,13 @@ static int msm_hsphy_set_suspend(struct usb_phy *uphy, int suspend)
 
 suspend:
 	if (suspend) { /* Bus suspend */
-		/*
-		 * The HUB class drivers calls usb_phy_notify_disconnect() upon a device
-		 * disconnect. Consider a scenario where a USB device is disconnected without
-		 * detaching the OTG cable. phy->cable_connected is marked false due to above
-		 * mentioned call path. Now, while entering low power mode (host bus suspend),
-		 * we come here and turn off regulators thinking no cable is connected. Prevent
-		 * this by not turning off regulators while in host mode.
-		 */
-		if (phy->cable_connected || (phy->phy.flags & PHY_HOST_MODE)) {
+#ifdef OPLUS_FEATURE_CHG_BASIC
+/*for otg issue: plugout the U disk, then plugin, can not recong*/
+		if (phy->cable_connected
+		    || (phy->phy.flags & PHY_HOST_MODE)) {
+#else
+		if (phy->cable_connected) {
+#endif
 			/* Enable auto-resume functionality during host mode
 			 * bus suspend with some FS/HS peripheral connected.
 			 */
@@ -1185,7 +1245,6 @@ static void msm_hsphy_port_state_work(struct work_struct *w)
 			msm_hsphy_unprepare_chg_det(phy);
 			msm_hsphy_notify_charger(phy, POWER_SUPPLY_TYPE_USB);
 			msm_hsphy_notify_extcon(phy, EXTCON_USB, 1);
-			dev_info(phy->phy.dev, "Connected to SDP\n");
 			phy->port_state = PORT_CHG_DET_DONE;
 		}
 		break;
@@ -1204,16 +1263,10 @@ static void msm_hsphy_port_state_work(struct work_struct *w)
 		if (status) {
 			msm_hsphy_notify_charger(phy,
 						POWER_SUPPLY_TYPE_USB_DCP);
-			dev_info(phy->phy.dev, "Connected to DCP\n");
 		} else {
 			msm_hsphy_notify_charger(phy,
 						POWER_SUPPLY_TYPE_USB_CDP);
 			msm_hsphy_notify_extcon(phy, EXTCON_USB, 1);
-			/*
-			 * Drive a pulse on DP to ensure proper CDP detection
-			 */
-			dev_info(phy->phy.dev, "Connected to CDP, pull DP up\n");
-			usb_phy_drive_dp_pulse(&phy->phy);
 		}
 		/*
 		 * Fall through to check if cable got disconnected
@@ -1346,12 +1399,7 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 		ret = PTR_ERR(phy->ref_clk_src);
 		return ret;
 	}
-	phy->ref_clk = devm_clk_get_optional(dev, "ref_clk");
-	if (IS_ERR(phy->ref_clk)) {
-		dev_dbg(dev, "clk get failed for ref_clk\n");
-		ret = PTR_ERR(phy->ref_clk);
-		return ret;
-	}
+
 	if (of_property_match_string(pdev->dev.of_node,
 				"clock-names", "cfg_ahb_clk") >= 0) {
 		phy->cfg_ahb_clk = devm_clk_get(dev, "cfg_ahb_clk");
@@ -1396,6 +1444,36 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 		}
 	}
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+/* 2021/05/24 lzj add for usb*/
+	phy->param_override_seq_cnt_host = of_property_count_elems_of_size(
+					dev->of_node,
+					"qcom,param-override-seq-host",
+					sizeof(*phy->param_override_seq_host));
+	if (phy->param_override_seq_cnt_host > 0) {
+		phy->param_override_seq_host = devm_kcalloc(dev,
+					phy->param_override_seq_cnt_host,
+					sizeof(*phy->param_override_seq_host),
+					GFP_KERNEL);
+		if (!phy->param_override_seq_host)
+			return -ENOMEM;
+
+		if (phy->param_override_seq_cnt_host % 2) {
+			dev_err(dev, "invalid param_override_seq_host_len\n");
+			return -EINVAL;
+		}
+
+		ret = of_property_read_u32_array(dev->of_node,
+				"qcom,param-override-seq-host",
+				phy->param_override_seq_host,
+				phy->param_override_seq_cnt_host);
+		if (ret) {
+			dev_err(dev, "qcom,param-override-seq-host read failed %d\n",
+				ret);
+			return ret;
+		}
+	}
+#endif
 	ret = of_property_read_u32_array(dev->of_node, "qcom,vdd-voltage-level",
 					 (u32 *) phy->vdd_levels,
 					 ARRAY_SIZE(phy->vdd_levels));

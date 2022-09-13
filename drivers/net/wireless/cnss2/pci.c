@@ -1199,8 +1199,6 @@ void cnss_pci_handle_linkdown(struct cnss_pci_data *pci_priv)
 	pci_priv->pci_link_down_ind = true;
 	spin_unlock_irqrestore(&pci_link_down_lock, flags);
 
-	/* Notify MHI about link down*/
-	mhi_report_error(pci_priv->mhi_ctrl);
 	if (pci_dev->device == QCA6174_DEVICE_ID)
 		disable_irq(pci_dev->irq);
 
@@ -1612,8 +1610,10 @@ static int cnss_pci_set_mhi_state(struct cnss_pci_data *pci_priv,
 	if (ret)
 		goto out;
 
+	#ifndef OPLUS_BUG_STABILITY
 	cnss_pr_vdbg("Setting MHI state: %s(%d)\n",
 		     cnss_mhi_state_to_str(mhi_state), mhi_state);
+	#endif /* OPLUS_BUG_STABILITY */
 
 	switch (mhi_state) {
 	case CNSS_MHI_INIT:

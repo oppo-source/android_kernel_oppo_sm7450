@@ -2402,8 +2402,8 @@ static int binder_translate_fd_array(struct binder_fd_array_object *fda,
 		if (!ret)
 			ret = binder_translate_fd(fd, offset, t, thread,
 						  in_reply_to);
-		if (ret)
-			return ret > 0 ? -EINVAL : ret;
+		if (ret < 0)
+			return ret;
 	}
 	return 0;
 }
@@ -4509,8 +4509,7 @@ static void binder_free_proc(struct binder_proc *proc)
 {
 	struct binder_device *device;
 	struct binder_proc_ext *eproc =
-		container_of(proc, struct binder_proc_ext, proc);
-
+				container_of(proc, struct binder_proc_ext, proc);
 	BUG_ON(!list_empty(&proc->todo));
 	BUG_ON(!list_empty(&proc->delivered_death));
 	if (proc->outstanding_txns)
@@ -4700,6 +4699,7 @@ static int binder_ioctl_write_read(struct file *filp,
 		binder_inner_proc_lock(proc);
 		if (!binder_worklist_empty_ilocked(&proc->todo))
 			binder_wakeup_proc_ilocked(proc);
+		trace_android_vh_binder_read_done(proc, thread);
 		binder_inner_proc_unlock(proc);
 		trace_android_vh_binder_read_done(proc, thread);
 		if (ret < 0) {
